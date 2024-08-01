@@ -1,60 +1,56 @@
+import iziToast from 'izitoast';
+import 'izitoast/dist/css/iziToast.min.css';
 import { useEffect, useState } from 'react';
-import Description from './components/Description/Description';
-import Options from './components/Options/Options';
-import Feedback from './components/Feedback/Feedback';
-import Notification from './components/Notification/Notification';
+import ContactForm from './components/ContactForm/ContactForm';
+import SearchBox from './components/SearchBox/SearchBox';
+import ContactList from './components/ContactList/ContactList';
+import initialContacts from './initialContacts.json';
 
-const DEFAULT_FEEDBACK = {
-  good: 0,
-  neutral: 0,
-  bad: 0,
-};
-
-function App() {
-  const [feedback, setFeedback] = useState(
-    JSON.parse(localStorage.getItem('savedFeedback')) || DEFAULT_FEEDBACK
+const App = () => {
+  const [searchValue, setSearchValue] = useState('');
+  const [contacts, setContacts] = useState(
+    localStorage.getItem('contacts')
+      ? JSON.parse(localStorage.getItem('contacts'))
+      : initialContacts
   );
 
-  const updateFeedback = feedbackType =>
-    setFeedback(
-      feedbackType
-        ? {
-            ...feedback,
-            [feedbackType]: feedback[feedbackType] + 1,
-          }
-        : DEFAULT_FEEDBACK
+  const filteredContacts = contacts.filter(contact =>
+    contact.name.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  const addContact = contact => {
+    if (
+      contacts.find(
+        ({ name, number }) => name === contact.name || number === contact.number
+      )
+    ) {
+      iziToast.warning({
+        position: 'topRight',
+        message: 'This name or number is already exists',
+      });
+      return;
+    }
+    setContacts(prevContacts => [...prevContacts, contact]);
+  };
+
+  const deleteContact = id => {
+    setContacts(prevContacts =>
+      prevContacts.filter(contact => contact.id !== id)
     );
-
-  const totalFeedback = Object.keys(feedback).reduce(
-    (acc, key) => acc + feedback[key],
-    0
-  );
-
-  const positiveFeedback = Math.round((feedback.good / totalFeedback) * 100);
+  };
 
   useEffect(() => {
-    localStorage.setItem('savedFeedback', JSON.stringify(feedback));
-  }, [feedback]);
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
   return (
-    <>
-      <Description title="Sip Happens Café">
-        Please leave your feedback about our service by selecting one of the
-        options below.
-      </Description>
-      <Options onUpdate={updateFeedback} totalFeedback={totalFeedback} />
-
-      {totalFeedback ? (
-        <Feedback
-          {...feedback}
-          totalFeedback={totalFeedback}
-          positiveFeedback={positiveFeedback}
-        />
-      ) : (
-        <Notification>No feedback yet</Notification>
-      )}
-    </>
+    <div>
+      <h1>Phonebook</h1>
+      <ContactForm addContact={addContact} />
+      <SearchBox value={searchValue} onSearch={setSearchValue} />
+      <ContactList contacts={filteredContacts} onDelete={deleteContact} />
+    </div>
   );
-}
+};
 
 export default App;
